@@ -1,0 +1,17 @@
+# Environment / secrets
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VCS
+.git
+.gitignore
+
+# OS / editor junk
+.DS_Store
+.vscode
+.idea

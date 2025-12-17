@@ -1,0 +1,27 @@
+version: "3.9"
+
+name: colibri-ecm-upload-events-router
+services:
+  upload-events-router:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: upload-events-router
+    container_name: upload-events-router
+    environment:
+      ACTIVEMQ_HOST: ${ACTIVEMQ_HOST}
+      ACTIVEMQ_PORT: ${ACTIVEMQ_PORT}
+      ACTIVEMQ_USER: ${ACTIVEMQ_USER}
+      ACTIVEMQ_PASSWORD: ${ACTIVEMQ_PASSWORD}
+
+      STOMP_HEARTBEAT_OUT: ${STOMP_HEARTBEAT_OUT}
+      STOMP_HEARTBEAT_IN: ${STOMP_HEARTBEAT_IN}
+      ACTIVEMQ_PREFETCH: ${ACTIVEMQ_PREFETCH}
+
+      EVENT_TOPIC: ${EVENT_TOPIC}
+      ROUTER_CLIENT_ID: ${ROUTER_CLIENT_ID}
+      ROUTER_SUBSCRIPTION_NAME: ${ROUTER_SUBSCRIPTION_NAME}
+
+      AUTOTAG_QUEUE: ${AUTOTAG_QUEUE}
+
+      LOG_LEVEL: ${LOG_LEVEL}

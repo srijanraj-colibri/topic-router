@@ -1,0 +1,26 @@
+# Environment files
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+
+# IDEs / editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Docker artifacts (optional)
+*.log
