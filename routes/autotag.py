@@ -17,7 +17,8 @@ class AutoTagRoute(BaseRoute):
         return settings.AUTOTAG_QUEUE
 
     def should_route(self, event: RepoEvent) -> bool:
-        decision = event.eventType == "CONTENT_READY"
+        decision = event.eventType == "BINARY_CHANGED" and (not event.path.startswith("/Company Home/RULE_BASED_TAGS"))
+        
         if decision:
             logger.debug("AutoTag matched for %s", event.nodeRef)
         return decision

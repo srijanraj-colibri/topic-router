@@ -1,10 +1,10 @@
+import json
 import logging
 from pydantic import ValidationError
 
 from core.schema import RepoEvent
 from core.registry import load_routes
 from core.publisher import QueuePublisher
-from core.parsers import parse_alfresco_event
 
 logger = logging.getLogger("router.listener")
 
@@ -22,7 +22,10 @@ class TopicRouterListener:
         sub_id = frame.headers.get("subscription")
 
         try:
-            raw_data = parse_alfresco_event(frame.body)
+            # ✅ Direct JSON parsing
+            raw_data = json.loads(frame.body)
+
+            # ✅ Schema validation
             event = RepoEvent.model_validate(raw_data)
 
             logger.info(
@@ -30,30 +33,53 @@ class TopicRouterListener:
                 extra={
                     "eventType": event.eventType,
                     "nodeRef": event.nodeRef,
+                    "path": event.path,
                 },
             )
+            
+            if event.eventType != "BINARY_CHANGED":
+                logger.info("Ignoring eventType=%s", event.eventType)
 
+                # ignoring other events as of now (please make changes as needed based on future extensions)
+                self.conn.send_frame(
+                    "ACK",
+                    headers={"id": ack_id, "subscription": sub_id},
+                )
+                return
+            
             for route in self.routes:
                 if route.should_route(event):
                     payload = route.transform(event)
                     self.publisher.publish(route.queue, payload)
+                else:
+                    logger.info("Ignoring eventType=%s path=%s" , event.eventType, event.path)
 
-            # ACK only after successful routing
+            # ✅ ACK only after full success
+            self.conn.send_frame(
+                "ACK",
+                headers={"id": ack_id, "subscription": sub_id},
+            )
+
+        except json.JSONDecodeError as e:
+            # ❌ Invalid JSON → ACK & drop
+            logger.error("Invalid JSON payload, ACK & drop", exc_info=e)
             self.conn.send_frame(
                 "ACK",
                 headers={"id": ack_id, "subscription": sub_id},
             )
 
         except ValidationError as e:
-            logger.error("Invalid event payload, ACK & drop", exc_info=e)
+            # ❌ Schema mismatch → ACK & drop
+            logger.error("Invalid event schema, ACK & drop", exc_info=e)
             self.conn.send_frame(
                 "ACK",
                 headers={"id": ack_id, "subscription": sub_id},
             )
 
         except Exception:
+            # 🔁 Any other failure → NO ACK (redelivery)
             logger.exception("Router failure, NO ACK (redelivery)")
-    
+
     def on_heartbeat_timeout(self):
         logger.warning("STOMP heartbeat timeout detected")
 
