@@ -1,3 +1,16 @@
+"""
+core.listener
+=============
+
+STOMP topic listener responsible for receiving repository events,
+validating them, and routing them to downstream queues.
+
+This listener implements a fail-safe message handling strategy:
+- Invalid or unprocessable messages are ACKed and dropped
+- Transient failures are NOT ACKed to allow redelivery
+- Routing decisions are delegated to registered routes
+"""
+
 import json
 import logging
 from pydantic import ValidationError
@@ -10,6 +23,17 @@ logger = logging.getLogger("router.listener")
 
 
 class TopicRouterListener:
+    """
+    STOMP topic listener for repository events.
+
+    This class receives messages from an ActiveMQ topic, validates
+    the event schema, applies routing rules, and publishes derived
+    payloads to destination queues.
+
+    The listener follows an "ACK on success or discard" strategy
+    to prevent poison-message loops.
+    """
+
 
     def __init__(self, conn):
         self.conn = conn
@@ -17,15 +41,34 @@ class TopicRouterListener:
         self.routes = load_routes()
         logger.info("Loaded %d routes", len(self.routes))
 
+    
+    # ------------------------------------------------------------------
+    # STOMP callbacks
+    # ------------------------------------------------------------------
     def on_message(self, frame):
+        """
+        Handle an incoming STOMP message.
+
+        Processing flow:
+        1. Parse JSON payload
+        2. Validate schema
+        3. Apply routing rules
+        4. Publish to queues
+        5. ACK on success or safe discard
+
+        Parameters
+        ----------
+        frame : Any
+            STOMP frame containing headers and message body.
+        """
         ack_id = frame.headers.get("ack")
         sub_id = frame.headers.get("subscription")
 
         try:
-            # ✅ Direct JSON parsing
+            # Direct JSON parsing
             raw_data = json.loads(frame.body)
 
-            # ✅ Schema validation
+            # Schema validation
             event = RepoEvent.model_validate(raw_data)
 
             logger.info(
@@ -54,7 +97,7 @@ class TopicRouterListener:
                 else:
                     logger.info("Ignoring eventType=%s path=%s" , event.eventType, event.path)
 
-            # ✅ ACK only after full success
+            # ACK only after full success
             self.conn.send_frame(
                 "ACK",
                 headers={"id": ack_id, "subscription": sub_id},
