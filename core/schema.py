@@ -1,7 +1,21 @@
-# core/schema.py
+"""
+core.schema
+===========
+
+Pydantic models defining the canonical event schema used by the
+Alfresco → ActiveMQ → Python Event Router pipeline.
+
+This module contains normalized, forward-compatible representations
+of repository events emitted by Alfresco repository extensions.
+
+Design goals:
+- Strict but flexible validation
+- Backward compatibility with evolving event producers
+- Clear separation between transport schema and business logic
+"""
 
 from typing import Optional, Union
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 
 class RepoEvent(BaseModel):
