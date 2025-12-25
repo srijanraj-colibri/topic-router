@@ -70,9 +70,6 @@ def main() -> None:
 
     logger.info("Starting Alfresco Event Router")
 
-    # ------------------------------------------------------------------
-    # Signal handling (Docker / Kubernetes friendly)
-    # ------------------------------------------------------------------
     signal.signal(signal.SIGTERM, _handle_shutdown)
     signal.signal(signal.SIGINT, _handle_shutdown)
 
@@ -117,10 +114,6 @@ def main() -> None:
                 "prefetch": settings.ACTIVEMQ_PREFETCH,
             },
         )
-
-        # ------------------------------------------------------------------
-        # Main loop
-        # ------------------------------------------------------------------
         while not _shutdown_requested:
             time.sleep(1)
 

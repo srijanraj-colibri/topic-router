@@ -1,6 +1,12 @@
 # Environment / secrets
 .env
 
+# Virtual environments
+venv/
+env/
+.venv/
+.virtualenv/
+
 # Python cache
 __pycache__/
 *.pyc
@@ -13,5 +19,5 @@ __pycache__/
 
 # OS / editor junk
 .DS_Store
-.vscode
-.idea
+.vscode/
+.idea/

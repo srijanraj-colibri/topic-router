@@ -89,6 +89,11 @@ class Settings(BaseSettings):
         ...,
         description="Destination queue for auto-tagging events",
     )
+    
+    SCORM_EXTRACTION_QUEUE: str = Field(
+        ...,
+        description="Destination queue for scorm detection and extraction events",
+    )
 
     # Future extensions
     # AUTOMETA_QUEUE: str

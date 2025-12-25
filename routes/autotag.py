@@ -26,9 +26,6 @@ class AutoTagRoute(BaseRoute):
     when they satisfy defined eligibility criteria.
     """
 
-    # ------------------------------------------------------------------
-    # BaseRoute contract
-    # ------------------------------------------------------------------
     @property
     def name(self) -> str:
         """
@@ -88,9 +85,6 @@ class AutoTagRoute(BaseRoute):
         )
         return True
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
     @staticmethod
     def _is_binary_changed(event: RepoEvent) -> bool:
         """

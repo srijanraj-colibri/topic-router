@@ -1,32 +1,40 @@
 # Alfresco AI Event Router (Community Edition)
 
-A **generic, extensible, event-driven router** for Alfresco Community Edition that enables
-external AI processing (auto-tagging, metadata extraction, vector embeddings, etc.)
-**without using any Enterprise-only features**.
+A generic, extensible, event-driven routing service for Alfresco Community Edition that enables external AI processing (auto-tagging, metadata extraction, vector embeddings, etc.) without using any Enterprise-only features.
 
-This service **subscribes durably to Alfresco repository events via ActiveMQ** and
-**fans out events into feature-specific queues**, keeping the Alfresco repository fast,
-safe, and upgrade-friendly.
+The router subscribes durably to Alfresco repository events via ActiveMQ and fans out events into feature-specific queues, ensuring the Alfresco repository remains fast, safe, and upgrade-friendly.
 
 ---
 
-## 🚀 Why This Exists
+## 🎯 Purpose
 
-Alfresco Community Edition:
+This service exists to solve a fundamental limitation of Alfresco Community Edition:
 
-- Does **not** provide AI auto-tagging
-- Does **not** provide vector generation
-- Does **not** expose an external Event Gateway
-- Must remain fast and stable under heavy uploads
+- ❌ No built-in AI auto-tagging  
+- ❌ No vector embedding generation  
+- ❌ No external event gateway  
+- ❌ AI workloads cannot safely run inside the repository JVM  
 
-AI workloads are:
-- Slow
-- Failure-prone
-- Not suitable for repository JVM threads
+AI workloads are inherently:
 
-This router enables **AI-driven extensions** using a **clean, decoupled, event-driven architecture**.
+- **Slow**  
+- **Failure-prone**  
+- **Resource intensive**  
+- **Unsuitable for synchronous repository execution**  
+
+This router introduces a clean, decoupled, asynchronous architecture that allows AI and external processing without compromising Alfresco stability.
 
 ---
+
+## 🧠 Core Idea
+
+&gt; **Alfresco announces what happened.**  
+&gt; **Python decides what needs to be done.**  
+&gt; **Queues guarantee reliable execution.**
+
+---
+
+## 🏗 High-Level Architecture
 
 Alfresco Community Repository
 |
@@ -41,169 +49,139 @@ Python Event Router
 |
 | Feature-based routing
 v
-┌──────────────┬──────────────┬──────────────┐
-| Autotag Q | Metadata Q | Vector Q |
-└──────────────┴──────────────┴──────────────┘
++----------------+----------------+----------------+
+| AutoTag Queue  | Metadata Queue | Vector Queue   |
++----------------+----------------+----------------+
 |
 v
 Independent AI / Processing Workers
 
-**Key principle:**  
-> Alfresco announces *what happened*.  
-> Python decides *what needs to be done*.  
-> Queues guarantee *reliable execution*.
+---
+
+## ✨ Key Features
+
+- ✅ Compatible with Alfresco Community Edition  
+- ✅ Uses Alfresco’s built-in ActiveMQ  
+- ✅ Durable topic subscription  
+- ✅ CLIENT_ACK semantics  
+- ✅ Reliable fan-out to multiple queues  
+- ✅ Plugin-based, extensible routing model  
+- ✅ No AI logic inside Alfresco JVM  
+- ✅ Safe under high upload volume  
+- ✅ Future-proof and upgrade-safe design  
 
 ---
 
-## ✅ Key Features
-
-- ✅ **Community Edition compatible**
-- ✅ Uses Alfresco’s built-in **ActiveMQ**
-- ✅ **Durable topic subscription**
-- ✅ **CLIENT_ACK semantics**
-- ✅ Reliable fan-out to multiple queues
-- ✅ Extensible plugin-based routing
-- ✅ No AI processing inside Alfresco JVM
-- ✅ Safe under high upload volume
-- ✅ Future-proof and upgrade-safe
-
----
+## 📂 Base Project Structure
 
 router-service/
-├── core/ # Router framework (stable)
-│ ├── base.py # Abstract route definition
-│ ├── listener.py # Topic listener (fan-out logic)
-│ ├── publisher.py # ActiveMQ queue publisher
-│ ├── registry.py # Dynamic route discovery
-│ └── schema.py # Event schema
+├── core/                     # Stable router framework
+│   ├── base.py               # Abstract route definition
+│   ├── listener.py           # Topic listener & fan-out logic
+│   ├── publisher.py          # ActiveMQ queue publisher
+│   ├── registry.py           # Dynamic route discovery
+│   └── schema.py             # Event schema (Pydantic)
 │
-├── routes/ # Feature plugins (extend here)
-│ └── autotag.py # Auto-tagging route
+├── routes/                   # Feature plugins (extend here)
+│   └── autotag.py            # Auto-tagging route
 │
-├── main.py # Application entrypoint
-├── settings.py # Pydantic-validated config
+├── main.py                   # Application entrypoint
+├── settings.py               # Validated configuration
 ├── requirements.txt
 │
 ├── docker/
-│ ├── Dockerfile
-│ ├── docker-compose.yml
-│ └── .dockerignore
+│   ├── Dockerfile
+│   ├── docker-compose.yaml
+│   └── .dockerignore
 │
 ├── .gitignore
-└── .env # Local only (ignored)
+└── .env                      # Local only (ignored)
 
+---
 
-## 🔌 Configuration
+## ⚙️ Configuration
 
-All configuration is injected via **environment variables**.
+All configuration is provided via environment variables (12-factor application compliant).
 
-`.env` is used **only by Docker Compose** and is **not included in the image**.
+`.env` is used only by Docker Compose and is never baked into the image.
 
 ### Example `.env`
 
 ```env
 # ActiveMQ
-ACTIVEMQ_HOST= <activemq host>
-ACTIVEMQ_PORT= <activemq port>
-ACTIVEMQ_USER= <activemq user>
-ACTIVEMQ_PASSWORD= <activemq password>
+ACTIVEMQ_HOST=<activemq host>
+ACTIVEMQ_PORT=<activemq port>
+ACTIVEMQ_USER=<activemq user>
+ACTIVEMQ_PASSWORD=<activemq password>
 
 # Router
-EVENT_TOPIC= <alfresco upload events topic>
-ROUTER_SUBSCRIPTION_NAME= <router subscription name>
+EVENT_TOPIC=<alfresco upload events topic>
+ROUTER_CLIENT_ID=<durable client id>
+ROUTER_SUBSCRIPTION_NAME=<durable subscription name>
 
 # Feature queues
-AUTOTAG_QUEUE=<autotag queue eg: /queue/alfresco.autotag>
+AUTOTAG_QUEUE=/queue/alfresco.autotag
+<add your other feature queue based on usecase>
 
+# Logging
 LOG_LEVEL=INFO
+```
+---
 
+## 📂 Base Project Structure
 
 🧩 Routing Model (Extensible by Design)
-
-Each feature is implemented as a route plugin.
-
-Route responsibilities
-
+Each feature is implemented as an independent route plugin.
+Route Responsibilities
+A route must:
 Decide whether to process an event
-
-Optionally transform the payload
-
+Optionally transform the event payload
 Declare which queue to publish to
-
-Routes do not:
-
+A route must not:
 Talk to ActiveMQ directly
-
 Perform AI processing
+Manage retries or failures
 
-Manage retries
+Example: Auto-Tagging Route
 
-Example Route: Auto-Tagging
 class AutoTagRoute(BaseRoute):
     def should_route(self, event):
-        return event.eventType == "CREATE"
+        return event.event_type == "BINARY_CHANGED"
 
-Adding a New Feature (Example)
+### ➕ Adding a New Feature (Example: Metadata Extraction)
 
-To add automatic metadata extraction:
+Create a new route file: routes/autometa.py
+Implement a route class:
 
-Create routes/autometa.py
+class AutoMetaRoute(BaseRoute):
+    ...
 
-Define a new route class
-
-Add an env variable:
-
+Add a new environment variable:
 AUTOMETA_QUEUE=/queue/alfresco.autometa
-
-
 Restart the router
+✅ No changes to core
+✅ No changes to Alfresco
+✅ No redeploy of existing features
 
-✔ No changes to core
-✔ No changes to Alfresco
-✔ No redeploy of existing features
+---
 
-🔐 Reliability & Safety Guarantees
+## 🚫 What This Service Does NOT Do
 
-Durable topic subscription
+This service intentionally does not:
+❌ Perform AI processing
+❌ Apply tags
+❌ Extract metadata
+❌ Generate vectors
+❌ Call Alfresco APIs directly
+All of that belongs in downstream workers, not in the router.
 
-CLIENT_ACK
-
-Message is ACKed only after all queue publishes succeed
-
-Failure → no ACK → broker redelivery
-
-No data loss
-
-Safe restarts
-
-
-🐳 Running with Docker
+## 🐳 Running with Docker
 
 From the project root:
 
 docker-compose --env-file .env -f docker/docker-compose.yaml up --build
 
 Docker Compose will:
-
-Load .env
-
-Inject environment variables
-
-Build the image
-
-Start the router
-
-
-🧪 What This Service Does NOT Do
-
-❌ AI processing
-
-❌ Tagging logic
-
-❌ Metadata extraction
-
-❌ Vector generation
-
-❌ Direct Alfresco API calls
-
-Those belong in downstream workers, not here.
+Load environment variables
+Build the router image
+Start the router service

@@ -42,9 +42,6 @@ class TopicRouterListener:
         logger.info("Loaded %d routes", len(self.routes))
 
     
-    # ------------------------------------------------------------------
-    # STOMP callbacks
-    # ------------------------------------------------------------------
     def on_message(self, frame):
         """
         Handle an incoming STOMP message.
@@ -65,10 +62,8 @@ class TopicRouterListener:
         sub_id = frame.headers.get("subscription")
 
         try:
-            # Direct JSON parsing
             raw_data = json.loads(frame.body)
 
-            # Schema validation
             event = RepoEvent.model_validate(raw_data)
 
             logger.info(
@@ -104,7 +99,6 @@ class TopicRouterListener:
             )
 
         except json.JSONDecodeError as e:
-            # ❌ Invalid JSON → ACK & drop
             logger.error("Invalid JSON payload, ACK & drop", exc_info=e)
             self.conn.send_frame(
                 "ACK",
@@ -112,7 +106,6 @@ class TopicRouterListener:
             )
 
         except ValidationError as e:
-            # ❌ Schema mismatch → ACK & drop
             logger.error("Invalid event schema, ACK & drop", exc_info=e)
             self.conn.send_frame(
                 "ACK",
@@ -120,7 +113,6 @@ class TopicRouterListener:
             )
 
         except Exception:
-            # 🔁 Any other failure → NO ACK (redelivery)
             logger.exception("Router failure, NO ACK (redelivery)")
 
     def on_heartbeat_timeout(self):
